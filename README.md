@@ -1,7 +1,7 @@
 # othello
 #5日目　オセロゲームです。（WEBアプリ）
 
-ここからPlayできます：
+ここからPlayできます：https://ramune3.github.io/othello/othello_game.html
 
 本体のコード：othello_game.html
 
