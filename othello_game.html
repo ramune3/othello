@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>オセロ - Othello Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', 'Helvetica', 'Hiragino Sans', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1200px;
+    }
+
+    .panel {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .game-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .side-panel {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      color: #1e293b;
+      text-align: center;
+      margin: 0;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      width: 100%;
+      padding: 25px;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: white;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+    }
+
+    .status.white-turn {
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      color: #1e293b;
+    }
+
+    .status.game-over {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .score-item {
+      flex: 1;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+    }
+
+    .score-item.black {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: white;
+    }
+
+    .score-item.white {
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      color: #1e293b;
+      border: 3px solid #cbd5e1;
+    }
+
+    .score-item.active {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .score-label {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+
+    .score-value {
+      font-size: 3rem;
+      font-weight: bold;
+    }
+
+    .board-wrapper {
+      background: linear-gradient(135deg, #059669, #047857);
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 70px);
+      grid-template-rows: repeat(8, 70px);
+      gap: 2px;
+      background: #1e293b;
+      border: 4px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .cell {
+      background: #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .cell:hover {
+      background: #34d399;
+    }
+
+    .cell.can-place {
+      background: #6ee7b7;
+      cursor: pointer;
+    }
+
+    .cell.can-place::after {
+      content: '';
+      width: 25px;
+      height: 25px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      position: absolute;
+      animation: hint 1s infinite;
+    }
+
+    @keyframes hint {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    .piece {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      animation: place 0.3s ease-out;
+    }
+
+    @keyframes place {
+      0% { transform: scale(0) rotateY(0deg); }
+      50% { transform: scale(1.2) rotateY(180deg); }
+      100% { transform: scale(1) rotateY(360deg); }
+    }
+
+    .piece.black {
+      background: radial-gradient(circle at 30% 30%, #4b5563, #1e293b);
+      border: 2px solid #0f172a;
+    }
+
+    .piece.white {
+      background: radial-gradient(circle at 30% 30%, #ffffff, #e2e8f0);
+      border: 2px solid #cbd5e1;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 18px 25px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #64748b, #475569);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .info-box {
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .info-box h2 {
+      color: #1e293b;
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 10px;
+    }
+
+    .rules {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: #475569;
+    }
+
+    .rules li {
+      margin: 10px 0;
+      padding-left: 5px;
+    }
+
+    .history {
+      max-height: 350px;
+      overflow-y: auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .history-item {
+      padding: 12px;
+      margin: 8px 0;
+      background: #f8fafc;
+      border-radius: 8px;
+      border-left: 4px solid #1e293b;
+    }
+
+    .history-item.white {
+      border-left-color: #94a3b8;
+    }
+
+    .hint-box {
+      background: #fef3c7;
+      border: 2px solid #fbbf24;
+      padding: 15px;
+      border-radius: 10px;
+      color: #92400e;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1024px) {
+      .board {
+        grid-template-columns: repeat(8, 50px);
+        grid-template-rows: repeat(8, 50px);
+      }
+
+      .piece {
+        width: 40px;
+        height: 40px;
+      }
+
+      .cell.can-place::after {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .side-panel {
+        width: 100%;
+      }
+
+      .board {
+        grid-template-columns: repeat(8, 45px);
+        grid-template-rows: repeat(8, 45px);
+      }
+
+      .piece {
+        width: 35px;
+        height: 35px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 左パネル -->
+    <div class="side-panel panel">
+      <div class="info-box">
+        <h2>🎮 ゲーム操作</h2>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="newGame()">新規ゲーム</button>
+          <button class="btn btn-secondary" onclick="undoMove()">1手戻す</button>
+          <button class="btn btn-danger" onclick="pass()">パス</button>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <h2>📖 ルール</h2>
+        <ul class="rules">
+          <li>💡 相手の石を挟んでひっくり返す</li>
+          <li>🎯 緑のマスに石を置ける</li>
+          <li>⏭️ 置けない時は自動パス</li>
+          <li>🏆 盤面が埋まったら終了</li>
+          <li>👑 石が多い方が勝ち</li>
+        </ul>
+      </div>
+
+      <div class="hint-box">
+        💡 <strong>ヒント：</strong><br>
+        角（四隅）を取ると有利！<br>
+        相手に角を取られないよう注意しよう。
+      </div>
+    </div>
+
+    <!-- 中央パネル -->
+    <div class="game-panel panel">
+      <h1>⚫⚪ オセロ</h1>
+      
+      <div class="status" id="status">⚫ 黒の番</div>
+
+      <div class="score-board">
+        <div class="score-item black active" id="blackScore">
+          <div class="score-label">⚫ 黒</div>
+          <div class="score-value">2</div>
+        </div>
+        <div class="score-item white" id="whiteScore">
+          <div class="score-label">⚪ 白</div>
+          <div class="score-value">2</div>
+        </div>
+      </div>
+
+      <div class="board-wrapper">
+        <div class="board" id="board"></div>
+      </div>
+    </div>
+
+    <!-- 右パネル -->
+    <div class="side-panel panel">
+      <div class="info-box">
+        <h2>📋 履歴</h2>
+        <div class="history" id="history">
+          <p style="text-align: center; color: #94a3b8;">ゲームが進むと表示されます</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ゲーム状態
+    let game = {
+      board: Array(8).fill(null).map(() => Array(8).fill(null)),
+      turn: 'black',
+      history: [],
+      gameOver: false,
+      passCount: 0
+    };
+
+    // 方向ベクトル（8方向）
+    const DIRECTIONS = [
+      [-1, -1], [0, -1], [1, -1],
+      [-1, 0],           [1, 0],
+      [-1, 1],  [0, 1],  [1, 1]
+    ];
+
+    // 初期化
+    function init() {
+      game.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      game.board[3][3] = 'white';
+      game.board[3][4] = 'black';
+      game.board[4][3] = 'black';
+      game.board[4][4] = 'white';
+      game.turn = 'black';
+      game.history = [];
+      game.gameOver = false;
+      game.passCount = 0;
+    }
+
+    // 描画
+    function render() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      const validMoves = getValidMoves(game.turn);
+
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.onclick = () => placePiece(x, y);
+
+          if (game.board[y][x]) {
+            const piece = document.createElement('div');
+            piece.className = `piece ${game.board[y][x]}`;
+            cell.appendChild(piece);
+          } else if (validMoves.some(([mx, my]) => mx === x && my === y)) {
+            cell.classList.add('can-place');
+          }
+
+          board.appendChild(cell);
+        }
+      }
+
+      updateScore();
+      updateStatus();
+    }
+
+    // 有効な手を取得
+    function getValidMoves(player) {
+      const moves = [];
+
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          if (game.board[y][x]) continue;
+          if (canPlace(x, y, player)) {
+            moves.push([x, y]);
+          }
+        }
+      }
+
+      return moves;
+    }
+
+    // 石を置けるかチェック
+    function canPlace(x, y, player) {
+      if (game.board[y][x]) return false;
+
+      const opponent = player === 'black' ? 'white' : 'black';
+
+      for (const [dx, dy] of DIRECTIONS) {
+        let nx = x + dx;
+        let ny = y + dy;
+        let found = false;
+
+        while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+          if (!game.board[ny][nx]) break;
+          if (game.board[ny][nx] === opponent) {
+            found = true;
+            nx += dx;
+            ny += dy;
+          } else if (game.board[ny][nx] === player) {
+            if (found) return true;
+            break;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    // 石を置く
+    function placePiece(x, y) {
+      if (game.gameOver) return;
+      if (!canPlace(x, y, game.turn)) return;
+
+      game.board[y][x] = game.turn;
+      flipPieces(x, y, game.turn);
+
+      addHistory(x, y);
+      game.passCount = 0;
+      nextTurn();
+    }
+
+    // 石をひっくり返す
+    function flipPieces(x, y, player) {
+      const opponent = player === 'black' ? 'white' : 'black';
+      const toFlip = [];
+
+      for (const [dx, dy] of DIRECTIONS) {
+        const line = [];
+        let nx = x + dx;
+        let ny = y + dy;
+
+        while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+          if (!game.board[ny][nx]) break;
+          if (game.board[ny][nx] === opponent) {
+            line.push([nx, ny]);
+            nx += dx;
+            ny += dy;
+          } else if (game.board[ny][nx] === player) {
+            toFlip.push(...line);
+            break;
+          } else {
+            break;
+          }
+        }
+      }
+
+      toFlip.forEach(([fx, fy]) => {
+        game.board[fy][fx] = player;
+      });
+    }
+
+    // 次のターン
+    function nextTurn() {
+      game.turn = game.turn === 'black' ? 'white' : 'black';
+
+      // 置ける場所があるかチェック
+      const validMoves = getValidMoves(game.turn);
+
+      if (validMoves.length === 0) {
+        game.passCount++;
+
+        // 両者ともパスなら終了
+        if (game.passCount >= 2 || isBoardFull()) {
+          endGame();
+        } else {
+          setTimeout(() => {
+            alert(`${game.turn === 'black' ? '黒' : '白'}は置く場所がありません。パスします。`);
+            nextTurn();
+          }, 300);
+        }
+      }
+
+      render();
+    }
+
+    // 盤面が埋まったかチェック
+    function isBoardFull() {
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          if (!game.board[y][x]) return false;
+        }
+      }
+      return true;
+    }
+
+    // ゲーム終了
+    function endGame() {
+      game.gameOver = true;
+      const { black, white } = countPieces();
+
+      let message = '';
+      if (black > white) {
+        message = `🎉 黒の勝ち！\n黒: ${black} - 白: ${white}`;
+      } else if (white > black) {
+        message = `🎉 白の勝ち！\n黒: ${black} - 白: ${white}`;
+      } else {
+        message = `🤝 引き分け！\n黒: ${black} - 白: ${white}`;
+      }
+
+      render();
+      setTimeout(() => alert(message), 500);
+    }
+
+    // 石の数をカウント
+    function countPieces() {
+      let black = 0, white = 0;
+
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          if (game.board[y][x] === 'black') black++;
+          if (game.board[y][x] === 'white') white++;
+        }
+      }
+
+      return { black, white };
+    }
+
+    // スコア更新
+    function updateScore() {
+      const { black, white } = countPieces();
+
+      const blackEl = document.getElementById('blackScore');
+      const whiteEl = document.getElementById('whiteScore');
+
+      blackEl.querySelector('.score-value').textContent = black;
+      whiteEl.querySelector('.score-value').textContent = white;
+
+      blackEl.classList.toggle('active', game.turn === 'black' && !game.gameOver);
+      whiteEl.classList.toggle('active', game.turn === 'white' && !game.gameOver);
+    }
+
+    // ステータス更新
+    function updateStatus() {
+      const status = document.getElementById('status');
+
+      if (game.gameOver) {
+        const { black, white } = countPieces();
+        if (black > white) {
+          status.textContent = '🎉 黒の勝ち！';
+        } else if (white > black) {
+          status.textContent = '🎉 白の勝ち！';
+        } else {
+          status.textContent = '🤝 引き分け！';
+        }
+        status.className = 'status game-over';
+      } else {
+        status.textContent = game.turn === 'black' ? '⚫ 黒の番' : '⚪ 白の番';
+        status.className = `status ${game.turn === 'white' ? 'white-turn' : ''}`;
+      }
+    }
+
+    // 履歴追加
+    function addHistory(x, y) {
+      const history = document.getElementById('history');
+      const item = document.createElement('div');
+      item.className = `history-item ${game.turn}`;
+
+      const move = game.history.length + 1;
+      const pos = String.fromCharCode(65 + x) + (y + 1);
+      item.textContent = `${move}手目: ${game.turn === 'black' ? '⚫' : '⚪'} ${pos}`;
+
+      history.appendChild(item);
+      history.scrollTop = history.scrollHeight;
+
+      game.history.push({ x, y, player: game.turn });
+    }
+
+    // 新規ゲーム
+    function newGame() {
+      if (game.history.length > 0 && !confirm('新しいゲームを始めますか？')) return;
+
+      init();
+      document.getElementById('history').innerHTML = 
+        '<p style="text-align: center; color: #94a3b8;">ゲームが進むと表示されます</p>';
+      render();
+    }
+
+    // 1手戻す
+    function undoMove() {
+      if (game.history.length === 0) {
+        alert('戻す手がありません');
+        return;
+      }
+
+      // 履歴から最後の手を取得
+      const lastMove = game.history.pop();
+      
+      // 盤面を最初からやり直す
+      init();
+      const moves = [...game.history];
+      game.history = [];
+
+      moves.forEach(move => {
+        game.board[move.y][move.x] = move.player;
+        flipPieces(move.x, move.y, move.player);
+        game.turn = game.turn === 'black' ? 'white' : 'black';
+      });
+
+      // 履歴を再構築
+      const historyEl = document.getElementById('history');
+      historyEl.innerHTML = '';
+      moves.forEach((move, i) => {
+        const item = document.createElement('div');
+        item.className = `history-item ${move.player}`;
+        const pos = String.fromCharCode(65 + move.x) + (move.y + 1);
+        item.textContent = `${i + 1}手目: ${move.player === 'black' ? '⚫' : '⚪'} ${pos}`;
+        historyEl.appendChild(item);
+      });
+
+      game.history = moves;
+      render();
+    }
+
+    // パス
+    function pass() {
+      if (game.gameOver) return;
+      
+      const validMoves = getValidMoves(game.turn);
+      if (validMoves.length > 0) {
+        alert('置ける場所があります。パスできません。');
+        return;
+      }
+
+      game.passCount++;
+      nextTurn();
+    }
+
+    // 開始
+    init();
+    render();
+  </script>
+</body>
+</html>
